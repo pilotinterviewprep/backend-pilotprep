@@ -65,13 +65,11 @@ const resetPassword = catchAsync(
 );
 
 const forgotPassword = catchAsync(async (req, res, next) => {
-  const result = await AuthServices.forgotPassword(
-    req.body.email_or_contact_number
-  );
+  const result = await AuthServices.forgotPassword(req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "New password sent to your email and contact number",
+    message: "New password sent to your email",
     data: result,
   });
 });

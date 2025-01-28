@@ -79,11 +79,11 @@ const resetPassword = (0, catch_async_1.default)((req, res, next) => __awaiter(v
     });
 }));
 const forgotPassword = (0, catch_async_1.default)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield Auth_services_1.AuthServices.forgotPassword(req.body.email_or_contact_number);
+    const result = yield Auth_services_1.AuthServices.forgotPassword(req.body);
     (0, send_response_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
-        message: "New password sent to your email and contact number",
+        message: "New password sent to your email",
         data: result,
     });
 }));

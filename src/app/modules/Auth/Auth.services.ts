@@ -10,6 +10,7 @@ import {
   IOTPCreatePayload,
   IRegisterPayload,
   ILoginCredential,
+  TForgotPasswordPayload,
 } from "./Auth.interfaces";
 import sendOTP, { OTPGenerator, verifyOTP } from "../../utils/otp-sender";
 import { TAuthUser } from "../../interfaces/common";
@@ -79,10 +80,13 @@ const register = async (data: IRegisterPayload) => {
   );
 
   const result = await prisma.$transaction(async (tx) => {
+    if (!storedOTP.name || !storedOTP.email) {
+      throw new ApiError(httpStatus.FORBIDDEN, "Name and email not found");
+    }
     const user = await tx.user.create({
       data: {
         name: storedOTP.name,
-        email: storedOTP.email || null,
+        email: storedOTP.email,
         contact_number: storedOTP.contact_number,
         password: hashedPassword,
       },
@@ -293,65 +297,91 @@ const resetPassword = async (
   };
 };
 
-const forgotPassword = async (email_or_contact_number: string) => {
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [
-        {
-          email: email_or_contact_number,
-        },
-        {
-          contact_number: email_or_contact_number,
-        },
-      ],
-      status: UserStatus.ACTIVE,
-      is_deleted: false,
-    },
-  });
+const forgotPassword = async (payload: TForgotPasswordPayload) => {
+  const { email, new_password, otp } = payload;
+  if (new_password && otp) {
+    const storedOTP = await prisma.oTP.findFirst({
+      where: {
+        otp: payload.otp,
+      },
+    });
 
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-  }
+    if (!storedOTP) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP");
+    }
 
-  const generatedPassword = passwordGenerator(6);
-  const hashedPassword = await bcrypt.hash(
-    generatedPassword,
-    Number(config.salt_rounds)
-  );
+    await verifyOTP(otp, storedOTP.otp, Number(storedOTP.expires_at));
 
-  const emailBody = `<div style="background-color: #F5F5F5; width: 80%; padding: 40px; display: flex; direction: column;        justify-content: center; align-items: center">
-            <h1>Your new password is:</h1>
-            <p style="font-size: 20px; font-weight: bold; background-color: #3352ff; padding: 10px; color: white; border-radius: 8px">${generatedPassword}</p>
-        </div>`;
-
-  let emailResponse;
-  if (user.email) {
-    emailResponse = await sendEmail(user.email, emailBody);
-  }
-
-  const SMSBody = `Dear ${
-    user.name || "customer"
-  }, your new password is: ${generatedPassword} \n${config.app_name}`;
-
-  const SMSResponse = await sendOTP(user.contact_number, SMSBody);
-
-  if (emailResponse?.accepted?.length === 0 && SMSResponse.success === false)
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to send new password to user email and contact number"
+    const hashedPassword = await bcrypt.hash(
+      new_password,
+      Number(config.salt_rounds)
     );
 
-  await prisma.user.update({
-    where: {
-      contact_number: user.contact_number,
-    },
-    data: {
-      password: hashedPassword,
-      password_changed_at: new Date(),
-    },
-  });
+    const result = await prisma.user.update({
+      where: {
+        email: storedOTP.email || "",
+      },
+      data: {
+        password: hashedPassword,
+      },
+      select: {
+        ...userSelectedFields,
+      },
+    });
 
-  return null;
+    return {
+      success: true,
+      message: "Password updated successfully",
+      data: {
+        id: result.id,
+        name,
+        email: result.email,
+        contact_number: result.contact_number,
+        profile_pic: result.profile_pic,
+        role: result.role,
+      },
+    };
+  } else if (email && !new_password && !otp) {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: {
+        email: email,
+        status: UserStatus.ACTIVE,
+      },
+    });
+
+    const generatedOTP = OTPGenerator();
+    const expirationTime = (new Date().getTime() + 2 * 60000).toString();
+
+    const emailBody = `<div style="background-color: #f5f5f5; padding: 40px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center;">
+    <h1>Your OTP is: </h1>
+    <p style="font-size: 24px; font-weight: bold; background-color: #007BFF; color: #fff; padding: 10px 20px; border-radius: 5px;">${generatedOTP}</p>
+  </div>`;
+
+    const createOTP = await prisma.oTP.create({
+      data: {
+        email: user.email,
+        otp: generatedOTP,
+        expires_at: expirationTime,
+      },
+    });
+
+    if (createOTP) {
+      const res = await sendEmail(user.email, emailBody);
+      if (res?.accepted.length > 0) {
+        return {
+          success: true,
+          message: "OTP sent successfully, check your email",
+          data: null,
+        };
+      }
+    } else {
+      return {
+        success: false,
+        message: "Failed to send OTP",
+        data: null,
+      };
+    }
+  }
 };
 
 export const AuthServices = {

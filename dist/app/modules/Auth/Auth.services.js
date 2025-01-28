@@ -46,7 +46,6 @@ const jwt_helper_1 = require("../../utils/jwt-helper");
 const otp_sender_1 = __importStar(require("../../utils/otp-sender"));
 const email_sender_1 = __importDefault(require("../../utils/email-sender"));
 const User_constants_1 = require("../User/User.constants");
-const password_generator_1 = __importDefault(require("../../utils/password-generator"));
 const createOTP = (data) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const generatedOTP = (0, otp_sender_1.OTPGenerator)();
@@ -92,10 +91,13 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
     }
     const hashedPassword = yield bcrypt_1.default.hash(data.password, Number(config_1.default.salt_rounds));
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        if (!storedOTP.name || !storedOTP.email) {
+            throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Name and email not found");
+        }
         const user = yield tx.user.create({
             data: {
                 name: storedOTP.name,
-                email: storedOTP.email || null,
+                email: storedOTP.email,
                 contact_number: storedOTP.contact_number,
                 password: hashedPassword,
             },
@@ -233,49 +235,79 @@ const resetPassword = (user, payload) => __awaiter(void 0, void 0, void 0, funct
         refreshToken,
     };
 });
-const forgotPassword = (email_or_contact_number) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const user = yield prisma_1.default.user.findFirst({
-        where: {
-            OR: [
-                {
-                    email: email_or_contact_number,
-                },
-                {
-                    contact_number: email_or_contact_number,
-                },
-            ],
-            status: client_1.UserStatus.ACTIVE,
-            is_deleted: false,
-        },
-    });
-    if (!user) {
-        throw new api_error_1.default(http_status_1.default.NOT_FOUND, "User not found");
+const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, new_password, otp } = payload;
+    if (new_password && otp) {
+        const storedOTP = yield prisma_1.default.oTP.findFirst({
+            where: {
+                otp: payload.otp,
+            },
+        });
+        if (!storedOTP) {
+            throw new api_error_1.default(http_status_1.default.BAD_REQUEST, "Invalid OTP");
+        }
+        yield (0, otp_sender_1.verifyOTP)(otp, storedOTP.otp, Number(storedOTP.expires_at));
+        const hashedPassword = yield bcrypt_1.default.hash(new_password, Number(config_1.default.salt_rounds));
+        const result = yield prisma_1.default.user.update({
+            where: {
+                email: storedOTP.email || "",
+            },
+            data: {
+                password: hashedPassword,
+            },
+            select: Object.assign({}, User_constants_1.userSelectedFields),
+        });
+        return {
+            success: true,
+            message: "Password updated successfully",
+            data: {
+                id: result.id,
+                name,
+                email: result.email,
+                contact_number: result.contact_number,
+                profile_pic: result.profile_pic,
+                role: result.role,
+            },
+        };
     }
-    const generatedPassword = (0, password_generator_1.default)(6);
-    const hashedPassword = yield bcrypt_1.default.hash(generatedPassword, Number(config_1.default.salt_rounds));
-    const emailBody = `<div style="background-color: #F5F5F5; width: 80%; padding: 40px; display: flex; direction: column;        justify-content: center; align-items: center">
-            <h1>Your new password is:</h1>
-            <p style="font-size: 20px; font-weight: bold; background-color: #3352ff; padding: 10px; color: white; border-radius: 8px">${generatedPassword}</p>
-        </div>`;
-    let emailResponse;
-    if (user.email) {
-        emailResponse = yield (0, email_sender_1.default)(user.email, emailBody);
+    else if (email && !new_password && !otp) {
+        const user = yield prisma_1.default.user.findUniqueOrThrow({
+            where: {
+                email: email,
+                status: client_1.UserStatus.ACTIVE,
+            },
+        });
+        const generatedOTP = (0, otp_sender_1.OTPGenerator)();
+        const expirationTime = (new Date().getTime() + 2 * 60000).toString();
+        const emailBody = `<div style="background-color: #f5f5f5; padding: 40px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center;">
+    <h1>Your OTP is: </h1>
+    <p style="font-size: 24px; font-weight: bold; background-color: #007BFF; color: #fff; padding: 10px 20px; border-radius: 5px;">${generatedOTP}</p>
+  </div>`;
+        const createOTP = yield prisma_1.default.oTP.create({
+            data: {
+                email: user.email,
+                otp: generatedOTP,
+                expires_at: expirationTime,
+            },
+        });
+        if (createOTP) {
+            const res = yield (0, email_sender_1.default)(user.email, emailBody);
+            if ((res === null || res === void 0 ? void 0 : res.accepted.length) > 0) {
+                return {
+                    success: true,
+                    message: "OTP sent successfully, check your email",
+                    data: null,
+                };
+            }
+        }
+        else {
+            return {
+                success: false,
+                message: "Failed to send OTP",
+                data: null,
+            };
+        }
     }
-    const SMSBody = `Dear ${user.name || "customer"}, your new password is: ${generatedPassword} \n${config_1.default.app_name}`;
-    const SMSResponse = yield (0, otp_sender_1.default)(user.contact_number, SMSBody);
-    if (((_a = emailResponse === null || emailResponse === void 0 ? void 0 : emailResponse.accepted) === null || _a === void 0 ? void 0 : _a.length) === 0 && SMSResponse.success === false)
-        throw new api_error_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to send new password to user email and contact number");
-    yield prisma_1.default.user.update({
-        where: {
-            contact_number: user.contact_number,
-        },
-        data: {
-            password: hashedPassword,
-            password_changed_at: new Date(),
-        },
-    });
-    return null;
 });
 exports.AuthServices = {
     createOTP,

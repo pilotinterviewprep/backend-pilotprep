@@ -49,22 +49,29 @@ const resetPasswordValidationSchema = z.object({
 });
 
 const forgotPasswordValidationSchema = z.object({
-  body: z.object({
-    email_or_contact_number: z
-      .string({
-        required_error: "Email or contact number is required",
-      })
-      .refine(
-        (value: string) => {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          const bangladeshiPhoneRegex = /^01\d{9}$/;
-          return emailRegex.test(value) || bangladeshiPhoneRegex.test(value);
-        },
-        {
-          message: "Invalid email or contact number",
-        }
-      ),
-  }),
+  body: z
+    .object({
+      email: z
+        .string({ required_error: "Email is required" })
+        .email({ message: "Invalid email address" }),
+      otp: z
+        .number({
+          invalid_type_error: "OTP should be a number",
+          required_error: "OTP is required",
+        })
+        .optional(),
+      new_password: z
+        .string({
+          invalid_type_error: "Password should be a text",
+          required_error: "Password is required",
+        })
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .regex(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+          message: "Password must contain at least one letter and one number",
+        })
+        .optional(),
+    })
+    .strict(),
 });
 
 export const AuthValidations = {

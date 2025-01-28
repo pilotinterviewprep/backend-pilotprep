@@ -19,3 +19,9 @@ export interface IChangePasswordPayload {
   old_password: string;
   new_password: string;
 }
+
+export type TForgotPasswordPayload = {
+  email: string;
+  new_password: string;
+  otp?: number;
+};

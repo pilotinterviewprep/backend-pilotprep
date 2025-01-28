@@ -47,19 +47,29 @@ const resetPasswordValidationSchema = zod_1.z.object({
     }),
 });
 const forgotPasswordValidationSchema = zod_1.z.object({
-    body: zod_1.z.object({
-        email_or_contact_number: zod_1.z
-            .string({
-            required_error: "Email or contact number is required",
+    body: zod_1.z
+        .object({
+        email: zod_1.z
+            .string({ required_error: "Email is required" })
+            .email({ message: "Invalid email address" }),
+        otp: zod_1.z
+            .number({
+            invalid_type_error: "OTP should be a number",
+            required_error: "OTP is required",
         })
-            .refine((value) => {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const bangladeshiPhoneRegex = /^01\d{9}$/;
-            return emailRegex.test(value) || bangladeshiPhoneRegex.test(value);
-        }, {
-            message: "Invalid email or contact number",
-        }),
-    }),
+            .optional(),
+        new_password: zod_1.z
+            .string({
+            invalid_type_error: "Password should be a text",
+            required_error: "Password is required",
+        })
+            .min(6, { message: "Password must be at least 6 characters long" })
+            .regex(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+            message: "Password must contain at least one letter and one number",
+        })
+            .optional(),
+    })
+        .strict(),
 });
 exports.AuthValidations = {
     resetPasswordValidationSchema,

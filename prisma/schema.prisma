@@ -10,9 +10,9 @@ datasource db {
 model User {
   id                  String     @id @default(uuid())
   name                String
-  email               String?    @unique
+  email               String     @unique
   password            String
-  contact_number      String     @unique
+  contact_number      String?    @unique
   profile_pic         String?
   status              UserStatus @default(ACTIVE)
   role                UserRole   @default(USER)
@@ -48,9 +48,9 @@ model Image {
 
 model OTP {
   id             String   @id @default(uuid())
-  name           String
+  name           String?
   email          String?
-  contact_number String
+  contact_number String?
   otp            Int      @unique
   expires_at     String
   created_at     DateTime @default(now())

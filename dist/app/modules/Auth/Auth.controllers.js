@@ -87,6 +87,15 @@ const forgotPassword = (0, catch_async_1.default)((req, res, next) => __awaiter(
         data: result,
     });
 }));
+const socialLogin = (0, catch_async_1.default)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield Auth_services_1.AuthServices.socialLogin(req.body);
+    (0, send_response_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "User login is successful",
+        data: result,
+    });
+}));
 exports.AuthControllers = {
     createOTP,
     register,
@@ -94,4 +103,5 @@ exports.AuthControllers = {
     resetPassword,
     forgotPassword,
     getAccessToken,
+    socialLogin,
 };

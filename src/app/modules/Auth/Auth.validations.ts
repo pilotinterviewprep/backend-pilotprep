@@ -1,3 +1,4 @@
+import { Provider } from "@prisma/client";
 import { z } from "zod";
 
 const createOTPValidationSchema = z.object({
@@ -74,10 +75,26 @@ const forgotPasswordValidationSchema = z.object({
     .strict(),
 });
 
+export const socialLoginValidationSchema = z.object({
+  body: z.object({
+    name: z.string({
+      required_error: "Name is required",
+      invalid_type_error: "Name must be a text",
+    }),
+    email: z
+      .string({ required_error: "Email is required" })
+      .email({ message: "Invalid email" }),
+    contact_number: z.string().optional(),
+    provider: z.enum(Object.values(Provider) as [string]),
+    profile_pic: z.string().optional(),
+  }),
+});
+
 export const AuthValidations = {
   resetPasswordValidationSchema,
   registerValidationSchema,
   createOTPValidationSchema,
   loginValidationSchema,
   forgotPasswordValidationSchema,
+  socialLoginValidationSchema,
 };

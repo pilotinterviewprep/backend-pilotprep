@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthValidations = void 0;
+exports.AuthValidations = exports.socialLoginValidationSchema = void 0;
+const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const createOTPValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
@@ -71,10 +72,25 @@ const forgotPasswordValidationSchema = zod_1.z.object({
     })
         .strict(),
 });
+exports.socialLoginValidationSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        name: zod_1.z.string({
+            required_error: "Name is required",
+            invalid_type_error: "Name must be a text",
+        }),
+        email: zod_1.z
+            .string({ required_error: "Email is required" })
+            .email({ message: "Invalid email" }),
+        contact_number: zod_1.z.string().optional(),
+        provider: zod_1.z.enum(Object.values(client_1.Provider)),
+        profile_pic: zod_1.z.string().optional(),
+    }),
+});
 exports.AuthValidations = {
     resetPasswordValidationSchema,
     registerValidationSchema,
     createOTPValidationSchema,
     loginValidationSchema,
     forgotPasswordValidationSchema,
+    socialLoginValidationSchema: exports.socialLoginValidationSchema,
 };

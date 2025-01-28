@@ -74,6 +74,16 @@ const forgotPassword = catchAsync(async (req, res, next) => {
   });
 });
 
+const socialLogin = catchAsync(async (req, res, next) => {
+  const result = await AuthServices.socialLogin(req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User login is successful",
+    data: result,
+  });
+});
+
 export const AuthControllers = {
   createOTP,
   register,
@@ -81,4 +91,5 @@ export const AuthControllers = {
   resetPassword,
   forgotPassword,
   getAccessToken,
+  socialLogin,
 };

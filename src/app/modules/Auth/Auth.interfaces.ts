@@ -1,3 +1,5 @@
+import { Provider } from "@prisma/client";
+
 export interface IOTPCreatePayload {
   name: string;
   email?: string;
@@ -24,4 +26,12 @@ export type TForgotPasswordPayload = {
   email: string;
   new_password: string;
   otp?: number;
+};
+
+export type TAccessBySocialMediaPayload = {
+  name: string;
+  email: string;
+  contact_number?: string;
+  profile_pic_id?: string;
+  provider: Provider;
 };

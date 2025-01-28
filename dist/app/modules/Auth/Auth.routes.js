@@ -17,4 +17,5 @@ router.post("/login", (0, validate_request_1.default)(Auth_validations_1.AuthVal
 router.post("/access-token", Auth_controllers_1.AuthControllers.getAccessToken);
 router.post("/reset-password", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.RETAILER, client_1.UserRole.USER), (0, validate_request_1.default)(Auth_validations_1.AuthValidations.resetPasswordValidationSchema), Auth_controllers_1.AuthControllers.resetPassword);
 router.post("/forgot-password", (0, validate_request_1.default)(Auth_validations_1.AuthValidations.forgotPasswordValidationSchema), Auth_controllers_1.AuthControllers.forgotPassword);
+router.post("/social-login", (0, validate_request_1.default)(Auth_validations_1.AuthValidations.socialLoginValidationSchema), Auth_controllers_1.AuthControllers.socialLogin);
 exports.AuthRoutes = router;

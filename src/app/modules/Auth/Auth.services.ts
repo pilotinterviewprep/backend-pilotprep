@@ -1,4 +1,4 @@
-import { UserStatus } from "@prisma/client";
+import { Provider, User, UserStatus } from "@prisma/client";
 import bcrypt from "bcrypt";
 import httpStatus from "http-status";
 import config from "../../../config";
@@ -11,6 +11,7 @@ import {
   IRegisterPayload,
   ILoginCredential,
   TForgotPasswordPayload,
+  TAccessBySocialMediaPayload,
 } from "./Auth.interfaces";
 import sendOTP, { OTPGenerator, verifyOTP } from "../../utils/otp-sender";
 import { TAuthUser } from "../../interfaces/common";
@@ -126,6 +127,12 @@ const login = async (credential: ILoginCredential) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, "User not found");
   }
+  if (!user.password) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "Email/Contact number or password is invalid"
+    );
+  }
 
   const checkPassword = await bcrypt.compare(password, user.password);
   if (!checkPassword) {
@@ -135,24 +142,7 @@ const login = async (credential: ILoginCredential) => {
     );
   }
 
-  const jwtPayload = {
-    id: user.id,
-    contact_number: user.contact_number,
-    email: user.email,
-    role: user.role,
-  };
-
-  const accessToken = generateToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expiresin
-  );
-
-  const refreshToken = generateToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expiresin
-  );
+  const { accessToken, refreshToken } = prepareToken(user);
 
   return {
     id: user.id,
@@ -231,6 +221,10 @@ const resetPassword = async (
       is_deleted: false,
     },
   });
+
+  if (!userInfo.password) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Password not found");
+  }
 
   const checkPassword = await bcrypt.compare(
     payload.old_password,
@@ -384,6 +378,88 @@ const forgotPassword = async (payload: TForgotPasswordPayload) => {
   }
 };
 
+const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
+  const isExist = await prisma.user.findUnique({
+    where: {
+      email: payload.email,
+    },
+  });
+
+  if (isExist) {
+    if (
+      isExist.provider === Provider.MANUAL ||
+      isExist.provider !== payload.provider
+    ) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        "User already exist, please try to correct method"
+      );
+    }
+
+    const { accessToken, refreshToken } = prepareToken(isExist);
+
+    return {
+      id: isExist.id,
+      name: isExist.name,
+      email: isExist.email,
+      contact_number: isExist.contact_number,
+      role: isExist.role,
+      profile_pic: isExist.profile_pic,
+      access_token: accessToken,
+      refreshToken,
+    };
+  } else {
+    const newUser = await prisma.user.create({
+      data: {
+        name: payload.name,
+        email: payload.email,
+        contact_number: payload.contact_number || null,
+        profile_pic: payload.profile_pic_id || null,
+        provider: payload.provider,
+      },
+    });
+
+    const { accessToken, refreshToken } = prepareToken(newUser);
+
+    return {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      contact_number: newUser.contact_number,
+      role: newUser.role,
+      profile_pic: newUser.profile_pic,
+      access_token: accessToken,
+      refreshToken,
+    };
+  }
+};
+
+const prepareToken = (user: User) => {
+  const jwtPayload = {
+    id: user.id,
+    contact_number: user.contact_number,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = generateToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expiresin
+  );
+
+  const refreshToken = generateToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expiresin
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const AuthServices = {
   createOTP,
   register,
@@ -391,4 +467,5 @@ export const AuthServices = {
   resetPassword,
   forgotPassword,
   getAccessToken,
+  socialLogin,
 };

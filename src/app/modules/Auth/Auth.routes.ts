@@ -40,4 +40,10 @@ router.post(
   AuthControllers.forgotPassword
 );
 
+router.post(
+  "/social-login",
+  validateRequest(AuthValidations.socialLoginValidationSchema),
+  AuthControllers.socialLogin
+);
+
 export const AuthRoutes = router;

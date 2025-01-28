@@ -131,18 +131,14 @@ const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
     if (!user) {
         throw new api_error_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
+    if (!user.password) {
+        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email/Contact number or password is invalid");
+    }
     const checkPassword = yield bcrypt_1.default.compare(password, user.password);
     if (!checkPassword) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email/Contact number or password is invalid");
     }
-    const jwtPayload = {
-        id: user.id,
-        contact_number: user.contact_number,
-        email: user.email,
-        role: user.role,
-    };
-    const accessToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_access_secret, config_1.default.jwt_access_expiresin);
-    const refreshToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_refresh_secret, config_1.default.jwt_refresh_expiresin);
+    const { accessToken, refreshToken } = prepareToken(user);
     return {
         id: user.id,
         name: user.name,
@@ -198,6 +194,9 @@ const resetPassword = (user, payload) => __awaiter(void 0, void 0, void 0, funct
             is_deleted: false,
         },
     });
+    if (!userInfo.password) {
+        throw new api_error_1.default(http_status_1.default.BAD_REQUEST, "Password not found");
+    }
     const checkPassword = yield bcrypt_1.default.compare(payload.old_password, userInfo.password);
     if (!checkPassword) {
         throw new api_error_1.default(http_status_1.default.BAD_REQUEST, "Old password is invalid");
@@ -309,6 +308,66 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
         }
     }
 });
+const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    const isExist = yield prisma_1.default.user.findUnique({
+        where: {
+            email: payload.email,
+        },
+    });
+    if (isExist) {
+        if (isExist.provider === client_1.Provider.MANUAL ||
+            isExist.provider !== payload.provider) {
+            throw new api_error_1.default(http_status_1.default.FORBIDDEN, "User already exist, please try to correct method");
+        }
+        const { accessToken, refreshToken } = prepareToken(isExist);
+        return {
+            id: isExist.id,
+            name: isExist.name,
+            email: isExist.email,
+            contact_number: isExist.contact_number,
+            role: isExist.role,
+            profile_pic: isExist.profile_pic,
+            access_token: accessToken,
+            refreshToken,
+        };
+    }
+    else {
+        const newUser = yield prisma_1.default.user.create({
+            data: {
+                name: payload.name,
+                email: payload.email,
+                contact_number: payload.contact_number || null,
+                profile_pic: payload.profile_pic_id || null,
+                provider: payload.provider,
+            },
+        });
+        const { accessToken, refreshToken } = prepareToken(newUser);
+        return {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            contact_number: newUser.contact_number,
+            role: newUser.role,
+            profile_pic: newUser.profile_pic,
+            access_token: accessToken,
+            refreshToken,
+        };
+    }
+});
+const prepareToken = (user) => {
+    const jwtPayload = {
+        id: user.id,
+        contact_number: user.contact_number,
+        email: user.email,
+        role: user.role,
+    };
+    const accessToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_access_secret, config_1.default.jwt_access_expiresin);
+    const refreshToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_refresh_secret, config_1.default.jwt_refresh_expiresin);
+    return {
+        accessToken,
+        refreshToken,
+    };
+};
 exports.AuthServices = {
     createOTP,
     register,
@@ -316,4 +375,5 @@ exports.AuthServices = {
     resetPassword,
     forgotPassword,
     getAccessToken,
+    socialLogin,
 };

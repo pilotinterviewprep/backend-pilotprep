@@ -127,6 +127,12 @@ const login = async (credential: ILoginCredential) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, "User not found");
   }
+  if (user.provider !== Provider.MANUAL) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "User exist, please try with correct method"
+    );
+  }
   if (!user.password) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
@@ -414,7 +420,7 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
         name: payload.name,
         email: payload.email,
         contact_number: payload.contact_number || null,
-        profile_pic: payload.profile_pic_id || null,
+        profile_pic: payload.profile_pic || null,
         provider: payload.provider,
       },
     });

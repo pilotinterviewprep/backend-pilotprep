@@ -131,6 +131,9 @@ const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
     if (!user) {
         throw new api_error_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
+    if (user.provider !== client_1.Provider.MANUAL) {
+        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "User exist, please try with correct method");
+    }
     if (!user.password) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email/Contact number or password is invalid");
     }
@@ -337,7 +340,7 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
                 name: payload.name,
                 email: payload.email,
                 contact_number: payload.contact_number || null,
-                profile_pic: payload.profile_pic_id || null,
+                profile_pic: payload.profile_pic || null,
                 provider: payload.provider,
             },
         });

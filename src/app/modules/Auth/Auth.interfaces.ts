@@ -32,6 +32,6 @@ export type TAccessBySocialMediaPayload = {
   name: string;
   email: string;
   contact_number?: string;
-  profile_pic_id?: string;
+  profile_pic?: string;
   provider: Provider;
 };

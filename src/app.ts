@@ -14,7 +14,11 @@ const app: Application = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookiePerser());
-app.use(cors({ origin: "*" }));
+app.use(cors({
+  origin: ["http://localhost:8083", "https://frontend-pilotprep.vercel.app"], 
+  credentials: true
+}));
+
 
 // test server
 app.get("/", (req: Request, res: Response) => {

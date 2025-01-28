@@ -14,12 +14,7 @@ const app: Application = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookiePerser());
-app.use(
-  cors({
-    origin: ["http://localhost:8083"],
-    credentials: true,
-  })
-);
+app.use(cors({ origin: "*" }));
 
 // test server
 app.get("/", (req: Request, res: Response) => {

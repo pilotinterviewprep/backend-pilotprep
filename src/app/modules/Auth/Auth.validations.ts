@@ -84,7 +84,7 @@ export const socialLoginValidationSchema = z.object({
     email: z
       .string({ required_error: "Email is required" })
       .email({ message: "Invalid email" }),
-    contact_number: z.string().optional(),
+    contact_number: z.string().optional().nullable(),
     provider: z.enum(Object.values(Provider) as [string]),
     profile_pic: z.string().optional(),
   }),

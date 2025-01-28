@@ -81,7 +81,7 @@ exports.socialLoginValidationSchema = zod_1.z.object({
         email: zod_1.z
             .string({ required_error: "Email is required" })
             .email({ message: "Invalid email" }),
-        contact_number: zod_1.z.string().optional(),
+        contact_number: zod_1.z.string().optional().nullable(),
         provider: zod_1.z.enum(Object.values(client_1.Provider)),
         profile_pic: zod_1.z.string().optional(),
     }),

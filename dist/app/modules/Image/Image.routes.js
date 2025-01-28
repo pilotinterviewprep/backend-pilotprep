@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ImageRoutes = void 0;
+const client_1 = require("@prisma/client");
+const express_1 = require("express");
+const auth_1 = __importDefault(require("../../middlewares/auth"));
+const Image_controllers_1 = require("./Image.controllers");
+const file_uploader_1 = require("../../utils/file-uploader");
+const Image_validations_1 = require("./Image.validations");
+const validate_request_1 = __importDefault(require("../../middlewares/validate-request"));
+const router = (0, express_1.Router)();
+router.get("/", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), Image_controllers_1.ImageControllers.getImages);
+router.post("/upload-images", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), file_uploader_1.fileUploader.multipleUpload, Image_controllers_1.ImageControllers.uploadImages);
+router.delete("/delete-images", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), (0, validate_request_1.default)(Image_validations_1.ImageValidations.deleteImagesValidationSchema), Image_controllers_1.ImageControllers.deleteImages);
+router.patch("/update/:id", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), (0, validate_request_1.default)(Image_validations_1.ImageValidations.updateImageValidationSchema), Image_controllers_1.ImageControllers.updateImage);
+router.get("/:id", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), Image_controllers_1.ImageControllers.getImage);
+exports.ImageRoutes = router;

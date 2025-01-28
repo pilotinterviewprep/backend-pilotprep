@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UserRoutes = void 0;
+const client_1 = require("@prisma/client");
+const express_1 = require("express");
+const auth_1 = __importDefault(require("../../middlewares/auth"));
+const User_controllers_1 = require("./User.controllers");
+const validate_form_data_1 = __importDefault(require("../../middlewares/validate-form-data"));
+const User_validations_1 = require("./User.validations");
+const file_uploader_1 = require("../../utils/file-uploader");
+const validate_request_1 = __importDefault(require("../../middlewares/validate-request"));
+const router = (0, express_1.Router)();
+router.get("/", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), User_controllers_1.UserControllers.getUsers);
+router.get("/profile", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.RETAILER, client_1.UserRole.USER), User_controllers_1.UserControllers.getMe);
+router.get("/:id", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), User_controllers_1.UserControllers.getUser);
+router.patch("/update-profile", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.RETAILER, client_1.UserRole.USER), file_uploader_1.fileUploader.singleUpload.single("profile_pic"), (0, validate_form_data_1.default)(User_validations_1.UserValidations.updateProfileValidationSchema), User_controllers_1.UserControllers.updateProfile);
+router.patch("/update-user/:id", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), (0, validate_request_1.default)(User_validations_1.UserValidations.updateUserRoleAndStatusValidationSchema), User_controllers_1.UserControllers.updateUserRoleAndStatus);
+exports.UserRoutes = router;

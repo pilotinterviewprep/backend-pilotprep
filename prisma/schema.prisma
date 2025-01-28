@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String     @id @default(uuid())
+  name                String
+  email               String?    @unique
+  password            String
+  contact_number      String     @unique
+  profile_pic         String?
+  status              UserStatus @default(ACTIVE)
+  role                UserRole   @default(USER)
+  is_deleted          Boolean    @default(false)
+  password_changed_at DateTime   @default(now())
+  created_at          DateTime   @default(now())
+  updated_at          DateTime   @updatedAt
+
+  images Image[]
+
+  @@map("users")
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  user_id     String?
+  name        String
+  alt_text    String
+  type        String
+  size        Int
+  width       Int
+  height      Int
+  path        String
+  bucket_id   String
+  bucket_name String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  uploaded_by User? @relation(fields: [user_id], references: [id])
+
+  @@map("images")
+}
+
+model OTP {
+  id             String   @id @default(uuid())
+  name           String
+  email          String?
+  contact_number String
+  otp            Int      @unique
+  expires_at     String
+  created_at     DateTime @default(now())
+
+  @@map("otps")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RETAILER
+  USER
+}

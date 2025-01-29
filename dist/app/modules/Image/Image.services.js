@@ -134,7 +134,7 @@ const getImages = (query) => __awaiter(void 0, void 0, void 0, function* () {
                 uploaded_by: {
                     select: {
                         id: true,
-                        name: true,
+                        first_name: true,
                     },
                 },
             },
@@ -159,7 +159,7 @@ const getImage = (id) => __awaiter(void 0, void 0, void 0, function* () {
             uploaded_by: {
                 select: {
                     id: true,
-                    name: true,
+                    first_name: true,
                 },
             },
         },

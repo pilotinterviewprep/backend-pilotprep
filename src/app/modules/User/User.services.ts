@@ -187,9 +187,8 @@ const updateProfile = async (
     data: payload,
     select: {
       id: true,
-      name: true,
+      first_name: true,
       email: true,
-      contact_number: true,
       role: true,
       profile_pic: true,
     },

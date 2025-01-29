@@ -50,13 +50,14 @@ model Image {
 }
 
 model OTP {
-  id             String   @id @default(uuid())
-  name           String?
-  email          String?
-  contact_number String?
-  otp            Int      @unique
-  expires_at     String
-  created_at     DateTime @default(now())
+  id         String   @id @default(uuid())
+  first_name String
+  last_name  String?
+  username   String
+  email      String?
+  otp        Int      @unique
+  expires_at String
+  created_at DateTime @default(now())
 
   @@map("otps")
 }

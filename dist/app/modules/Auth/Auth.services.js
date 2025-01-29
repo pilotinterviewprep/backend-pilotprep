@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -52,15 +19,14 @@ const http_status_1 = __importDefault(require("http-status"));
 const config_1 = __importDefault(require("../../../config"));
 const api_error_1 = __importDefault(require("../../error/api-error"));
 const prisma_1 = __importDefault(require("../../shared/prisma"));
-const jwt_helper_1 = require("../../utils/jwt-helper");
-const otp_sender_1 = __importStar(require("../../utils/otp-sender"));
 const email_sender_1 = __importDefault(require("../../utils/email-sender"));
+const jwt_helper_1 = require("../../utils/jwt-helper");
+const otp_sender_1 = require("../../utils/otp-sender");
 const User_constants_1 = require("../User/User.constants");
 const createOTP = (data) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const generatedOTP = (0, otp_sender_1.OTPGenerator)();
     const expirationTime = (new Date().getTime() + 2 * 60000).toString();
-    const SMSBody = `Dear ${data.name || "customer"}, your OTP is: ${generatedOTP} \n${config_1.default.app_name}`;
     const emailBody = `<div style="background-color: #F5F5F5; padding: 40px; text-align: center">
             <h4 style="font-size: 16px; font-weight: bold; color: #3352ff">Your OTP is <span>${generatedOTP}</span></h4>
         </div>`;
@@ -68,14 +34,12 @@ const createOTP = (data) => __awaiter(void 0, void 0, void 0, function* () {
     if (data.email) {
         emailResponse = yield (0, email_sender_1.default)(data.email, emailBody);
     }
-    const SMSResponse = yield (0, otp_sender_1.default)(data.contact_number, SMSBody);
-    if (((_a = emailResponse === null || emailResponse === void 0 ? void 0 : emailResponse.accepted) === null || _a === void 0 ? void 0 : _a.length) === 0 && SMSResponse.success === false)
+    if (((_a = emailResponse === null || emailResponse === void 0 ? void 0 : emailResponse.accepted) === null || _a === void 0 ? void 0 : _a.length) === 0)
         throw new api_error_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to send OTP");
     const result = yield prisma_1.default.oTP.create({
         data: {
-            name: data.name,
+            name: data.first_name,
             email: data.email || null,
-            contact_number: data.contact_number,
             otp: generatedOTP,
             expires_at: expirationTime,
         },
@@ -106,9 +70,9 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const user = yield tx.user.create({
             data: {
-                name: storedOTP.name,
-                email: storedOTP.email,
-                contact_number: storedOTP.contact_number,
+                first_name: storedOTP.name,
+                username: storedOTP.name,
+                email: storedOTP.email.toLowerCase(),
                 password: hashedPassword,
             },
             select: Object.assign({}, User_constants_1.userSelectedFields),
@@ -123,15 +87,12 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return result;
 });
 const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email_or_contact_number, password } = credential;
+    const { email, password } = credential;
     const user = yield prisma_1.default.user.findFirst({
         where: {
             OR: [
                 {
-                    email: email_or_contact_number,
-                },
-                {
-                    contact_number: email_or_contact_number,
+                    email: email,
                 },
             ],
             status: client_1.UserStatus.ACTIVE,
@@ -154,9 +115,11 @@ const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
     const { accessToken, refreshToken } = prepareToken(user);
     return {
         id: user.id,
-        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        country: user.country,
         email: user.email,
-        contact_number: user.contact_number,
         role: user.role,
         profile_pic: user.profile_pic,
         access_token: accessToken,
@@ -184,16 +147,17 @@ const getAccessToken = (token) => __awaiter(void 0, void 0, void 0, function* ()
     }
     const jwtPayload = {
         id: user.id,
-        contact_number: user.contact_number,
         email: user.email,
         role: user.role,
     };
     const accessToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_access_secret, config_1.default.jwt_access_expiresin);
     return {
         id: user.id,
-        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        country: user.country,
         email: user.email,
-        contact_number: user.contact_number,
         role: user.role,
         profile_pic: user.profile_pic,
         access_token: accessToken,
@@ -335,9 +299,8 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
         const { accessToken, refreshToken } = prepareToken(isExist);
         return {
             id: isExist.id,
-            name: isExist.name,
+            first_name: isExist.first_name,
             email: isExist.email,
-            contact_number: isExist.contact_number,
             role: isExist.role,
             profile_pic: isExist.profile_pic,
             access_token: accessToken,
@@ -347,9 +310,9 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
     else {
         const newUser = yield prisma_1.default.user.create({
             data: {
-                name: payload.name,
+                first_name: payload.first_name,
                 email: payload.email,
-                contact_number: payload.contact_number || null,
+                username: payload.username,
                 profile_pic: payload.profile_pic || null,
                 provider: payload.provider,
             },
@@ -357,9 +320,8 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
         const { accessToken, refreshToken } = prepareToken(newUser);
         return {
             id: newUser.id,
-            name: newUser.name,
+            first_name: newUser.first_name,
             email: newUser.email,
-            contact_number: newUser.contact_number,
             role: newUser.role,
             profile_pic: newUser.profile_pic,
             access_token: accessToken,
@@ -370,7 +332,6 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
 const prepareToken = (user) => {
     const jwtPayload = {
         id: user.id,
-        contact_number: user.contact_number,
         email: user.email,
         role: user.role,
     };

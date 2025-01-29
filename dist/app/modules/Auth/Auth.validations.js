@@ -5,14 +5,16 @@ const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const createOTPValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        name: zod_1.z
+        first_name: zod_1.z
             .string({
             required_error: "Name is required",
             invalid_type_error: "Name must be a text",
         })
             .min(1, "Name is required"),
-        email: zod_1.z.string().email({ message: "Invalid email" }).optional(),
-        contact_number: zod_1.z.string({ required_error: "Contact number is required" }),
+        username: zod_1.z
+            .string({ required_error: "Username is required" })
+            .min(3, { message: "Username must be at least 3 characters long" }),
+        email: zod_1.z.string().email({ message: "Invalid email" }),
     }),
 });
 const registerValidationSchema = zod_1.z.object({
@@ -30,9 +32,7 @@ const registerValidationSchema = zod_1.z.object({
 });
 const loginValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        email_or_contact_number: zod_1.z
-            .string()
-            .min(1, { message: "Email or contact number is required" }),
+        email: zod_1.z.string().min(1, { message: "Email is required" }),
         password: zod_1.z.string({ required_error: "Password is required" }),
     }),
 });
@@ -74,14 +74,16 @@ const forgotPasswordValidationSchema = zod_1.z.object({
 });
 exports.socialLoginValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        name: zod_1.z.string({
+        first_name: zod_1.z.string({
             required_error: "Name is required",
             invalid_type_error: "Name must be a text",
         }),
+        username: zod_1.z
+            .string({ required_error: "Username is required" })
+            .min(3, { message: "Username must be at least 3 characters long" }),
         email: zod_1.z
             .string({ required_error: "Email is required" })
             .email({ message: "Invalid email" }),
-        contact_number: zod_1.z.string().optional().nullable(),
         provider: zod_1.z.enum(Object.values(client_1.Provider)),
         profile_pic: zod_1.z.string().optional(),
     }),

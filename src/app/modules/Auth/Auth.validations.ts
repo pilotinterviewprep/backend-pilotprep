@@ -3,14 +3,16 @@ import { z } from "zod";
 
 const createOTPValidationSchema = z.object({
   body: z.object({
-    name: z
+    first_name: z
       .string({
         required_error: "Name is required",
         invalid_type_error: "Name must be a text",
       })
       .min(1, "Name is required"),
-    email: z.string().email({ message: "Invalid email" }).optional(),
-    contact_number: z.string({ required_error: "Contact number is required" }),
+    username: z
+      .string({ required_error: "Username is required" })
+      .min(3, { message: "Username must be at least 3 characters long" }),
+    email: z.string().email({ message: "Invalid email" }),
   }),
 });
 
@@ -30,9 +32,7 @@ const registerValidationSchema = z.object({
 
 const loginValidationSchema = z.object({
   body: z.object({
-    email_or_contact_number: z
-      .string()
-      .min(1, { message: "Email or contact number is required" }),
+    email: z.string().min(1, { message: "Email is required" }),
     password: z.string({ required_error: "Password is required" }),
   }),
 });
@@ -77,14 +77,16 @@ const forgotPasswordValidationSchema = z.object({
 
 export const socialLoginValidationSchema = z.object({
   body: z.object({
-    name: z.string({
+    first_name: z.string({
       required_error: "Name is required",
       invalid_type_error: "Name must be a text",
     }),
+    username: z
+      .string({ required_error: "Username is required" })
+      .min(3, { message: "Username must be at least 3 characters long" }),
     email: z
       .string({ required_error: "Email is required" })
       .email({ message: "Invalid email" }),
-    contact_number: z.string().optional().nullable(),
     provider: z.enum(Object.values(Provider) as [string]),
     profile_pic: z.string().optional(),
   }),

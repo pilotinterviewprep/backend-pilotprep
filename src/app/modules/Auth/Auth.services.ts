@@ -3,28 +3,25 @@ import bcrypt from "bcrypt";
 import httpStatus from "http-status";
 import config from "../../../config";
 import ApiError from "../../error/api-error";
+import { TAuthUser } from "../../interfaces/common";
 import prisma from "../../shared/prisma";
+import sendEmail from "../../utils/email-sender";
 import { generateToken, verifyToken } from "../../utils/jwt-helper";
+import { OTPGenerator, verifyOTP } from "../../utils/otp-sender";
+import { userSelectedFields } from "../User/User.constants";
 import {
   IChangePasswordPayload,
+  ILoginCredential,
   IOTPCreatePayload,
   IRegisterPayload,
-  ILoginCredential,
-  TForgotPasswordPayload,
   TAccessBySocialMediaPayload,
+  TForgotPasswordPayload,
 } from "./Auth.interfaces";
-import sendOTP, { OTPGenerator, verifyOTP } from "../../utils/otp-sender";
-import { TAuthUser } from "../../interfaces/common";
-import sendEmail from "../../utils/email-sender";
-import { userSelectedFields } from "../User/User.constants";
-import passwordGenerator from "../../utils/password-generator";
+import { count } from "console";
 
 const createOTP = async (data: IOTPCreatePayload) => {
   const generatedOTP = OTPGenerator();
   const expirationTime = (new Date().getTime() + 2 * 60000).toString();
-  const SMSBody = `Dear ${
-    data.name || "customer"
-  }, your OTP is: ${generatedOTP} \n${config.app_name}`;
 
   const emailBody = `<div style="background-color: #F5F5F5; padding: 40px; text-align: center">
             <h4 style="font-size: 16px; font-weight: bold; color: #3352ff">Your OTP is <span>${generatedOTP}</span></h4>
@@ -35,21 +32,18 @@ const createOTP = async (data: IOTPCreatePayload) => {
     emailResponse = await sendEmail(data.email, emailBody);
   }
 
-  const SMSResponse = await sendOTP(data.contact_number, SMSBody);
-
-  if (emailResponse?.accepted?.length === 0 && SMSResponse.success === false)
+  if (emailResponse?.accepted?.length === 0)
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to send OTP");
 
   const result = await prisma.oTP.create({
     data: {
-      name: data.name,
+      first_name: data.first_name,
+      username: data.username,
       email: data.email || null,
-      contact_number: data.contact_number,
       otp: generatedOTP,
       expires_at: expirationTime,
     },
     select: {
-      contact_number: true,
       expires_at: true,
     },
   });
@@ -81,14 +75,14 @@ const register = async (data: IRegisterPayload) => {
   );
 
   const result = await prisma.$transaction(async (tx) => {
-    if (!storedOTP.name || !storedOTP.email) {
+    if (!storedOTP.first_name || !storedOTP.email) {
       throw new ApiError(httpStatus.FORBIDDEN, "Name and email not found");
     }
     const user = await tx.user.create({
       data: {
-        name: storedOTP.name,
-        email: storedOTP.email,
-        contact_number: storedOTP.contact_number,
+        first_name: storedOTP.first_name,
+        username: storedOTP.username,
+        email: storedOTP.email.toLowerCase(),
         password: hashedPassword,
       },
       select: {
@@ -107,16 +101,13 @@ const register = async (data: IRegisterPayload) => {
 };
 
 const login = async (credential: ILoginCredential) => {
-  const { email_or_contact_number, password } = credential;
+  const { email, password } = credential;
 
   const user = await prisma.user.findFirst({
     where: {
       OR: [
         {
-          email: email_or_contact_number,
-        },
-        {
-          contact_number: email_or_contact_number,
+          email: email,
         },
       ],
       status: UserStatus.ACTIVE,
@@ -152,9 +143,11 @@ const login = async (credential: ILoginCredential) => {
 
   return {
     id: user.id,
-    name: user.name,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    username: user.username,
+    country: user.country,
     email: user.email,
-    contact_number: user.contact_number,
     role: user.role,
     profile_pic: user.profile_pic,
     access_token: accessToken,
@@ -194,7 +187,6 @@ const getAccessToken = async (token: string) => {
 
   const jwtPayload = {
     id: user.id,
-    contact_number: user.contact_number,
     email: user.email,
     role: user.role,
   };
@@ -207,9 +199,11 @@ const getAccessToken = async (token: string) => {
 
   return {
     id: user.id,
-    name: user.name,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    username: user.username,
+    country: user.country,
     email: user.email,
-    contact_number: user.contact_number,
     role: user.role,
     profile_pic: user.profile_pic,
     access_token: accessToken,
@@ -359,6 +353,8 @@ const forgotPassword = async (payload: TForgotPasswordPayload) => {
 
     const createOTP = await prisma.oTP.create({
       data: {
+        first_name: user.first_name,
+        username: user.username,
         email: user.email,
         otp: generatedOTP,
         expires_at: expirationTime,
@@ -406,9 +402,8 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
 
     return {
       id: isExist.id,
-      name: isExist.name,
+      first_name: isExist.first_name,
       email: isExist.email,
-      contact_number: isExist.contact_number,
       role: isExist.role,
       profile_pic: isExist.profile_pic,
       access_token: accessToken,
@@ -417,9 +412,9 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
   } else {
     const newUser = await prisma.user.create({
       data: {
-        name: payload.name,
+        first_name: payload.first_name,
         email: payload.email,
-        contact_number: payload.contact_number || null,
+        username: payload.username,
         profile_pic: payload.profile_pic || null,
         provider: payload.provider,
       },
@@ -429,9 +424,8 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
 
     return {
       id: newUser.id,
-      name: newUser.name,
+      first_name: newUser.first_name,
       email: newUser.email,
-      contact_number: newUser.contact_number,
       role: newUser.role,
       profile_pic: newUser.profile_pic,
       access_token: accessToken,
@@ -443,7 +437,6 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
 const prepareToken = (user: User) => {
   const jwtPayload = {
     id: user.id,
-    contact_number: user.contact_number,
     email: user.email,
     role: user.role,
   };

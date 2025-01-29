@@ -1,11 +1,12 @@
 import { Provider } from "@prisma/client";
 
 export interface IOTPCreatePayload {
-  name: string;
-  email?: string;
-  password: string;
-  contact_number: string;
-  profile_pic_id: string;
+  first_name: string;
+  last_name?: string;
+  username: string;
+  country?: string;
+  email: string;
+  profile_pic?: string;
 }
 export interface IRegisterPayload {
   otp: number;
@@ -13,7 +14,7 @@ export interface IRegisterPayload {
 }
 
 export interface ILoginCredential {
-  email_or_contact_number: string;
+  email: string;
   password: string;
 }
 
@@ -29,9 +30,10 @@ export type TForgotPasswordPayload = {
 };
 
 export type TAccessBySocialMediaPayload = {
-  name: string;
+  first_name: string;
+  last_name?: string;
+  username: string;
   email: string;
-  contact_number?: string;
   profile_pic?: string;
   provider: Provider;
 };

@@ -18,9 +18,9 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const config_1 = __importDefault(require("../../config"));
 const prisma_1 = __importDefault(require("../shared/prisma"));
 const superAdmin = {
-    name: config_1.default.super_admin_name,
+    first_name: config_1.default.super_admin_name,
     email: config_1.default.super_admin_email,
-    contact_number: config_1.default.super_admin_contact_number,
+    username: config_1.default.super_admin_name.toLowerCase(),
     role: client_1.UserRole.SUPER_ADMIN,
 };
 const seedSuperAdmin = () => __awaiter(void 0, void 0, void 0, function* () {

@@ -146,7 +146,7 @@ const getImages = async (query: Record<string, any>) => {
         uploaded_by: {
           select: {
             id: true,
-            name: true,
+            first_name: true,
           },
         },
       },
@@ -173,7 +173,7 @@ const getImage = async (id: string) => {
       uploaded_by: {
         select: {
           id: true,
-          name: true,
+          first_name: true,
         },
       },
     },

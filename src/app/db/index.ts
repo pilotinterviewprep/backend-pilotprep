@@ -4,9 +4,9 @@ import config from "../../config";
 import prisma from "../shared/prisma";
 
 const superAdmin = {
-  name: config.super_admin_name,
+  first_name: config.super_admin_name,
   email: config.super_admin_email,
-  contact_number: config.super_admin_contact_number,
+  username: config.super_admin_name.toLowerCase(),
   role: UserRole.SUPER_ADMIN,
 };
 

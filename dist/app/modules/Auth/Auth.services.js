@@ -38,13 +38,13 @@ const createOTP = (data) => __awaiter(void 0, void 0, void 0, function* () {
         throw new api_error_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to send OTP");
     const result = yield prisma_1.default.oTP.create({
         data: {
-            name: data.first_name,
+            first_name: data.first_name,
+            username: data.username,
             email: data.email || null,
             otp: generatedOTP,
             expires_at: expirationTime,
         },
         select: {
-            contact_number: true,
             expires_at: true,
         },
     });
@@ -56,6 +56,7 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
             otp: Number(data.otp),
         },
     });
+    console.log(storedOTP, "storedOTP......");
     if (!storedOTP) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, "OTP not matched");
     }
@@ -63,16 +64,20 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
     if (verifiedOTP.success === false) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, verifiedOTP.message);
     }
+    console.log(verifiedOTP, "verifiedOTP");
     const hashedPassword = yield bcrypt_1.default.hash(data.password, Number(config_1.default.salt_rounds));
+    console.log(hashedPassword, "hashedPassword");
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
-        if (!storedOTP.name || !storedOTP.email) {
+        if (!storedOTP.first_name || !storedOTP.email) {
             throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Name and email not found");
         }
         const user = yield tx.user.create({
             data: {
-                first_name: storedOTP.name,
-                username: storedOTP.name,
-                email: storedOTP.email.toLowerCase(),
+                first_name: storedOTP.first_name,
+                last_name: storedOTP.last_name,
+                username: storedOTP.username,
+                country: storedOTP.country,
+                email: storedOTP.email,
                 password: hashedPassword,
             },
             select: Object.assign({}, User_constants_1.userSelectedFields),
@@ -84,6 +89,7 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
         });
         return user;
     }));
+    console.log(result, "result");
     return result;
 });
 const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
@@ -194,7 +200,6 @@ const resetPassword = (user, payload) => __awaiter(void 0, void 0, void 0, funct
     }
     const jwtPayload = {
         id: result.id,
-        contact_number: result.contact_number,
         email: result.email,
         role: result.role,
     };
@@ -202,9 +207,8 @@ const resetPassword = (user, payload) => __awaiter(void 0, void 0, void 0, funct
     const refreshToken = (0, jwt_helper_1.generateToken)(jwtPayload, config_1.default.jwt_refresh_secret, config_1.default.jwt_refresh_expiresin);
     return {
         id: result.id,
-        name: result.name,
+        name: result.first_name + " " + result.last_name,
         email: result.email,
-        contact_number: result.contact_number,
         role: result.role,
         profile_pic: result.profile_pic,
         access_token: accessToken,
@@ -240,7 +244,6 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
                 id: result.id,
                 name,
                 email: result.email,
-                contact_number: result.contact_number,
                 profile_pic: result.profile_pic,
                 role: result.role,
             },
@@ -261,6 +264,8 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
   </div>`;
         const createOTP = yield prisma_1.default.oTP.create({
             data: {
+                first_name: user.first_name,
+                username: user.username,
                 email: user.email,
                 otp: generatedOTP,
                 expires_at: expirationTime,

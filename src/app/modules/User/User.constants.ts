@@ -11,13 +11,13 @@ export const userFilterableFields = [
   "status",
 ];
 
-export const userSearchableFields = ["name", "email", "contact_number"];
+export const userSearchableFields = ["name", "email"];
 
 export const userSortableFields = [
   "id",
-  "name",
+  "first_name",
+  "last_name",
   "email",
-  "contact_number",
   "created_at",
   "updated_at",
   "role",
@@ -26,9 +26,10 @@ export const userSortableFields = [
 
 export const userSelectedFields = {
   id: true,
-  name: true,
+  first_name: true,
+  last_name: true,
+  country: true,
   email: true,
-  contact_number: true,
   role: true,
   status: true,
   profile_pic: true,

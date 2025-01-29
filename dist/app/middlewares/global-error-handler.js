@@ -19,6 +19,7 @@ const globalErrorHandler = (error, req, res, next) => {
             message: error.message || "",
         },
     ];
+    console.log("check error: ", error);
     if (error instanceof zod_1.ZodError) {
         const simplifiedError = (0, zod_error_1.default)(error);
         statusCode = simplifiedError.statusCode;

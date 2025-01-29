@@ -86,7 +86,7 @@ const register = async (data: IRegisterPayload) => {
     const user = await tx.user.create({
       data: {
         first_name: storedOTP.first_name,
-        last_name: storedOTP.last_name, 
+        last_name: storedOTP.last_name,
         username: storedOTP.username,
         country: storedOTP.country,
         email: storedOTP.email,
@@ -271,7 +271,6 @@ const resetPassword = async (
 
   const jwtPayload = {
     id: result.id,
-    contact_number: result.contact_number,
     email: result.email,
     role: result.role,
   };
@@ -290,9 +289,8 @@ const resetPassword = async (
 
   return {
     id: result.id,
-    name: result.name,
+    name: result.first_name + " " + result.last_name,
     email: result.email,
-    contact_number: result.contact_number,
     role: result.role,
     profile_pic: result.profile_pic,
     access_token: accessToken,
@@ -339,7 +337,6 @@ const forgotPassword = async (payload: TForgotPasswordPayload) => {
         id: result.id,
         name,
         email: result.email,
-        contact_number: result.contact_number,
         profile_pic: result.profile_pic,
         role: result.role,
       },

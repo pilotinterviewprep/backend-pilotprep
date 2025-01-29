@@ -12,12 +12,12 @@ exports.userFilterableFields = [
     "role",
     "status",
 ];
-exports.userSearchableFields = ["name", "email", "contact_number"];
+exports.userSearchableFields = ["name", "email"];
 exports.userSortableFields = [
     "id",
-    "name",
+    "first_name",
+    "last_name",
     "email",
-    "contact_number",
     "created_at",
     "updated_at",
     "role",
@@ -25,9 +25,10 @@ exports.userSortableFields = [
 ];
 exports.userSelectedFields = {
     id: true,
-    name: true,
+    first_name: true,
+    last_name: true,
+    country: true,
     email: true,
-    contact_number: true,
     role: true,
     status: true,
     profile_pic: true,

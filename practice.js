@@ -123,4 +123,3 @@ const group = reviews.reduce((group, review) => {
   return group;
 }, {});
 
-console.log(group["5"]);

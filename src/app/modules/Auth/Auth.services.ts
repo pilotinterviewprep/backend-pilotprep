@@ -132,13 +132,13 @@ const login = async (credential: ILoginCredential) => {
   if (user.provider !== Provider.MANUAL) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "User exist, please try with correct method"
+      "You are trying to login with wrong method"
     );
   }
   if (!user.password) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "Email/Contact number or password is invalid"
+      "Email or password is invalid"
     );
   }
 
@@ -146,7 +146,7 @@ const login = async (credential: ILoginCredential) => {
   if (!checkPassword) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "Email/Contact number or password is invalid"
+      "Email or password is invalid"
     );
   }
 
@@ -411,7 +411,7 @@ const socialLogin = async (payload: TAccessBySocialMediaPayload) => {
     ) {
       throw new ApiError(
         httpStatus.FORBIDDEN,
-        "User already exist, please try to correct method"
+        "You are trying to login with wrong method"
       );
     }
 

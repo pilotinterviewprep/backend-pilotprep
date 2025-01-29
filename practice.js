@@ -15,15 +15,6 @@ const attributesFormatter = (attributes) => {
   return formattedAttributes;
 };
 
-// const attributs = Object.keys(attribute).map((item) => {
-//   if (attribute[item]?.value) {
-//     return {
-//       slug: item,
-//       value: attribute[item]?.value,
-//     };
-//   }
-// });
-
 console.log(attributesFormatter(attribute));
 
 const specification = [
@@ -53,8 +44,6 @@ const specification = [
 
 const str = "r,b,c";
 
-console.log(str.split(","));
-
 const params = {
   sortBy: "price",
   sortOrder: "asc",
@@ -62,8 +51,6 @@ const params = {
 };
 
 const path = "/general/riyazul.jpg";
-
-console.log(path.split("/").pop());
 
 const reviews = [
   {

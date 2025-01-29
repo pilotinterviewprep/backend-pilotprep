@@ -28,6 +28,7 @@ export const userSelectedFields = {
   id: true,
   first_name: true,
   last_name: true,
+  username: true,
   country: true,
   email: true,
   role: true,

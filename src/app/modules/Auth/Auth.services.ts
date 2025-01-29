@@ -57,7 +57,6 @@ const register = async (data: IRegisterPayload) => {
       otp: Number(data.otp),
     },
   });
-  console.log(storedOTP, "storedOTP......");
   if (!storedOTP) {
     throw new ApiError(httpStatus.FORBIDDEN, "OTP not matched");
   }
@@ -70,14 +69,10 @@ const register = async (data: IRegisterPayload) => {
     throw new ApiError(httpStatus.FORBIDDEN, verifiedOTP.message);
   }
 
-  console.log(verifiedOTP, "verifiedOTP");
-
   const hashedPassword = await bcrypt.hash(
     data.password,
     Number(config.salt_rounds)
   );
-
-  console.log(hashedPassword, "hashedPassword");
 
   const result = await prisma.$transaction(async (tx) => {
     if (!storedOTP.first_name || !storedOTP.email) {
@@ -103,8 +98,6 @@ const register = async (data: IRegisterPayload) => {
     });
     return user;
   });
-
-  console.log(result, "result");
 
   return result;
 };
@@ -335,7 +328,9 @@ const forgotPassword = async (payload: TForgotPasswordPayload) => {
       message: "Password updated successfully",
       data: {
         id: result.id,
-        name,
+        first_name: result.first_name,
+        last_name: result.last_name,
+        username: result.username,
         email: result.email,
         profile_pic: result.profile_pic,
         role: result.role,

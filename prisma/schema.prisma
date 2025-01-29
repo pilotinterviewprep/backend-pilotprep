@@ -55,6 +55,7 @@ model OTP {
   last_name  String?
   username   String
   email      String?
+  country    String?
   otp        Int      @unique
   expires_at String
   created_at DateTime @default(now())

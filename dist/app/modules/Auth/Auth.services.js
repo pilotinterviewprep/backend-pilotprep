@@ -27,6 +27,14 @@ const createOTP = (data) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const generatedOTP = (0, otp_sender_1.OTPGenerator)();
     const expirationTime = (new Date().getTime() + 2 * 60000).toString();
+    const isUserExist = yield prisma_1.default.user.findFirst({
+        where: {
+            email: data.email,
+        },
+    });
+    if (isUserExist) {
+        throw new api_error_1.default(http_status_1.default.BAD_REQUEST, "Email already exist. Please login");
+    }
     const emailBody = `<div style="background-color: #F5F5F5; padding: 40px; text-align: center">
             <h4 style="font-size: 16px; font-weight: bold; color: #3352ff">Your OTP is <span>${generatedOTP}</span></h4>
         </div>`;
@@ -56,7 +64,6 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
             otp: Number(data.otp),
         },
     });
-    console.log(storedOTP, "storedOTP......");
     if (!storedOTP) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, "OTP not matched");
     }
@@ -64,9 +71,7 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
     if (verifiedOTP.success === false) {
         throw new api_error_1.default(http_status_1.default.FORBIDDEN, verifiedOTP.message);
     }
-    console.log(verifiedOTP, "verifiedOTP");
     const hashedPassword = yield bcrypt_1.default.hash(data.password, Number(config_1.default.salt_rounds));
-    console.log(hashedPassword, "hashedPassword");
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
         if (!storedOTP.first_name || !storedOTP.email) {
             throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Name and email not found");
@@ -89,7 +94,6 @@ const register = (data) => __awaiter(void 0, void 0, void 0, function* () {
         });
         return user;
     }));
-    console.log(result, "result");
     return result;
 });
 const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
@@ -109,14 +113,14 @@ const login = (credential) => __awaiter(void 0, void 0, void 0, function* () {
         throw new api_error_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     if (user.provider !== client_1.Provider.MANUAL) {
-        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "User exist, please try with correct method");
+        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "You are trying to login with wrong method");
     }
     if (!user.password) {
-        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email/Contact number or password is invalid");
+        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email or password is invalid");
     }
     const checkPassword = yield bcrypt_1.default.compare(password, user.password);
     if (!checkPassword) {
-        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email/Contact number or password is invalid");
+        throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Email or password is invalid");
     }
     const { accessToken, refreshToken } = prepareToken(user);
     return {
@@ -242,7 +246,9 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
             message: "Password updated successfully",
             data: {
                 id: result.id,
-                name,
+                first_name: result.first_name,
+                last_name: result.last_name,
+                username: result.username,
                 email: result.email,
                 profile_pic: result.profile_pic,
                 role: result.role,
@@ -256,6 +262,9 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
                 status: client_1.UserStatus.ACTIVE,
             },
         });
+        if (user.provider !== client_1.Provider.MANUAL) {
+            throw new api_error_1.default(http_status_1.default.FORBIDDEN, "Can't reset password. You are registered with third party provider");
+        }
         const generatedOTP = (0, otp_sender_1.OTPGenerator)();
         const expirationTime = (new Date().getTime() + 2 * 60000).toString();
         const emailBody = `<div style="background-color: #f5f5f5; padding: 40px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center;">
@@ -299,7 +308,7 @@ const socialLogin = (payload) => __awaiter(void 0, void 0, void 0, function* () 
     if (isExist) {
         if (isExist.provider === client_1.Provider.MANUAL ||
             isExist.provider !== payload.provider) {
-            throw new api_error_1.default(http_status_1.default.FORBIDDEN, "User already exist, please try to correct method");
+            throw new api_error_1.default(http_status_1.default.FORBIDDEN, "You are trying to login with wrong method");
         }
         const { accessToken, refreshToken } = prepareToken(isExist);
         return {

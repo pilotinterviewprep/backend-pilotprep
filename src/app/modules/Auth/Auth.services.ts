@@ -17,11 +17,20 @@ import {
   TAccessBySocialMediaPayload,
   TForgotPasswordPayload,
 } from "./Auth.interfaces";
-import { count } from "console";
 
 const createOTP = async (data: IOTPCreatePayload) => {
   const generatedOTP = OTPGenerator();
   const expirationTime = (new Date().getTime() + 2 * 60000).toString();
+
+  const isUserExist = await prisma.user.findFirst({
+    where: {
+      email: data.email,
+    },
+  });
+
+  if (isUserExist) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Email already exist. Please login");
+  }
 
   const emailBody = `<div style="background-color: #F5F5F5; padding: 40px; text-align: center">
             <h4 style="font-size: 16px; font-weight: bold; color: #3352ff">Your OTP is <span>${generatedOTP}</span></h4>
@@ -343,6 +352,13 @@ const forgotPassword = async (payload: TForgotPasswordPayload) => {
         status: UserStatus.ACTIVE,
       },
     });
+
+    if (user.provider !== Provider.MANUAL) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        "Can't reset password. You are registered with third party provider"
+      );
+    }
 
     const generatedOTP = OTPGenerator();
     const expirationTime = (new Date().getTime() + 2 * 60000).toString();
